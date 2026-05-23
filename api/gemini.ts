@@ -1,18 +1,13 @@
-export const config = { runtime: 'edge' };
-
-export default async function handler(req: Request) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt, base64, mimeType } = await req.json();
+  const { prompt, base64, mimeType } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'API key not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'API key not configured' });
   }
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
@@ -28,16 +23,11 @@ export default async function handler(req: Request) {
   });
 
   if (!geminiRes.ok) {
-    return new Response(JSON.stringify({ error: 'Gemini API error' }), {
-      status: geminiRes.status,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(geminiRes.status).json({ error: 'Gemini API error' });
   }
 
   const data = await geminiRes.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-  return new Response(JSON.stringify({ text }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return res.status(200).json({ text });
 }
